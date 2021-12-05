@@ -184,7 +184,6 @@ bootstrap =
   ) 
 ```
 
-
 #### For $\hat{r}^2$
 
 ```{r}
@@ -243,6 +242,7 @@ ci_logbeta = logbeta %>%
     ci_lower = quantile(log_beta, 0.025),
     ci_upper = quantile(log_beta, 0.975)
   ) 
+
 ci_logbeta %>% 
   knitr::kable()
 
