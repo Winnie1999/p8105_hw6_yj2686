@@ -185,7 +185,7 @@ bootstrap =
 ```
 
 
-For $\hat{r}^2$
+#### For $\hat{r}^2$
 
 ```{r}
 r_squared = bootstrap %>% 
@@ -200,16 +200,22 @@ r_squared %>%
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
-r_squared %>% 
+ci_r_squared = r_squared %>% 
   summarize(
     ci_lower = quantile(r.squared, 0.025),
     ci_upper = quantile(r.squared, 0.975)
-  ) %>% 
+  ) 
+
+ci_r_squared %>% 
   knitr::kable()
 ```
 
+* Description for $\hat{r}^2$: 
 
-For $log(\hat{\beta_0} * \hat{\beta_1})$
+The distribution plot of $\hat{r}^2$ is approximately normal, unimodal, slightly left-skewed and centered around 0.912.
+The 95% Confidence Interval for $\hat{r}^2$ is (`r ci_r_squared[1]`, `r ci_r_squared[2]`)
+
+#### For $\log(\hat{\beta}_0 * \hat{\beta}_1)$ 
 
 ```{r}
 logbeta = bootstrap %>% 
@@ -232,12 +238,17 @@ logbeta %>%
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
-logbeta %>% 
+ci_logbeta = logbeta %>% 
   summarize(
     ci_lower = quantile(log_beta, 0.025),
     ci_upper = quantile(log_beta, 0.975)
-  ) %>% 
+  ) 
+ci_logbeta %>% 
   knitr::kable()
-  
+
 ```
 
+* Description for $\log(\hat{\beta}_0 * \hat{\beta}_1)$ : 
+
+The distribution plot of $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is approximately normal, unimodal, and centered around 2.01.
+The 95% Confidence Interval for $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is (`r ci_logbeta[1]`, `r ci_logbeta[2]`)
