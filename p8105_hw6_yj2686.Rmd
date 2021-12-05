@@ -44,7 +44,7 @@ birthweight = read.csv("./birthweight.csv") %>%
 sum(is.na(birthweight))
 ```
 
-### Propose a regression model for birth weight.
+### Propose a regression model for birth weight
 
 Since birth weight of baby is usually associated with baby's length at birth, I made a scatter plot of baby's length at birth `blength`. 
 
@@ -56,7 +56,7 @@ birthweight %>%
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-It seemed that there might be a linear relationship between baby's length at birth `blength` and birth weight `bwt`. Thus, I will try `blength` as the predictor of the regression model for birth weight and make a plot of model residuals against fitted values
+According to the scatter plot, it seemed that there might be a linear relationship between baby's length at birth `blength` and birth weight `bwt`. Thus, I will try `blength` as the predictor of the regression model for birth weight and make a plot of model residuals against fitted values
 
 ```{r}
 fit1 = lm(bwt ~ blength, data = birthweight)
@@ -75,10 +75,10 @@ birthweight %>%
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-### Compare your model to two others:
+### Compare your model to two others
 
-One using length at birth and gestational age as predictors (main effects only)
-One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+fit2: Using length at birth and gestational age as predictors (main effects only)
+fit3: Using head circumference, length, sex, and all interactions (including the three-way interaction) between these as predictors
 
 ```{r}
 fit2 = lm(bwt ~ blength + gaweeks,birthweight)
@@ -146,14 +146,16 @@ cv_df %>%
   labs(
     title = "distribution of RMSE values for three candidate model",
     y = "Root-mean-square-deviation"
-  )+
+  ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-According to the distribution of RMSE, fit3 model have the lowest RMSE value, meaning that fit3 would be the most optimal model among three candidate models
+According to the distribution of RMSE, fit3 model have the lowest RMSE value and the distribution is more centered, meaning that fit3 would be the most optimal model among three candidate models
 
 
 ## Problem 2
+
+### Load 2017 Central Park weather data
 
 ```{r weather data}
 weather_df = 
@@ -169,18 +171,73 @@ weather_df =
   select(name, id, everything())
 ```
 
-Bootstrapping
+### Bootstrapping and plot the distribution of estimates
 
 ```{r}
 bootstrap = 
   weather_df %>% 
-  modelr::bootstrap(n = 5000, id = "strap_id") %>% 
+  modelr::bootstrap(n = 5000, id = "strap_number") %>% 
   mutate(
-    strap = map(strap, as_tibble),
     models = map(strap, ~lm(tmax ~ tmin, data = .x)),
-    results = map(models, broom::tidy),
-    summary = map(models, broom::glance)
+    results1 = map(models, broom::glance),
+    results2 = map(models, broom::tidy)
+  ) 
+```
+
+
+For $\hat{r}^2$
+
+```{r}
+r_squared = bootstrap %>% 
+  unnest(results1) %>% 
+  select(r.squared)
+  
+r_squared %>% 
+  ggplot(aes(x = r.squared)) +
+  geom_density() +
+  labs(
+    title = "Distribution of r-squared"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+r_squared %>% 
+  summarize(
+    ci_lower = quantile(r.squared, 0.025),
+    ci_upper = quantile(r.squared, 0.975)
   ) %>% 
-  unnest(c(results, summary), names_repair = "universal")
+  knitr::kable()
+```
+
+
+For $log(\hat{\beta_0} * \hat{\beta_1})$
+
+```{r}
+logbeta = bootstrap %>% 
+  unnest(results2) %>% 
+  select(strap_number, term, estimate) %>% 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate
+  ) %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    log_beta = log(intercept * tmin)
+  )
+
+logbeta %>% 
+  ggplot(aes(log_beta)) +
+  geom_density() +
+  labs(
+    title = "Distribution of log(beta0 * beta1)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+logbeta %>% 
+  summarize(
+    ci_lower = quantile(log_beta, 0.025),
+    ci_upper = quantile(log_beta, 0.975)
+  ) %>% 
+  knitr::kable()
+  
 ```
 
