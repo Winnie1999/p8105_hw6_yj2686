@@ -8,7 +8,6 @@ output: github_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(p8105.datasets)
-
 set.seed(1)
 
 knitr::opts_chunk$set(
@@ -31,8 +30,68 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ## Problem 1
 
+Load and clean the data for regression analysis
+
 ```{r birthweight}
-birthweight = read.csv("./birthweight.csv")
+birthweight = read.csv("./birthweight.csv") %>% 
+  mutate(babysex = factor(if_else(babysex == 1, "male", "female")),
+         frace = factor(recode(frace, '1' = "White", '2' = "Black", '3' = "Asian", 
+                               '4' = "Puerto Rican", '8' = "Other", '9' = "Unknown")),
+         mrace = factor(recode(mrace,'1' = "White", '2' = "Black", '3' = "Asian", 
+                               '4' = "Puerto Rican", '8' = "Other", '9' = "Unknown")),
+         malform = factor(recode(malform, '0' = "absent", '1' = "present")))
+# check for missing data
+sum(is.na(birthweight))
+```
+
+Propose a regression model for birth weight.
+
+Since birth weight of baby is usually associated with baby's length at birth, I made a scatter plot of baby's length at birth `blength`. 
+
+```{r}
+birthweight %>% 
+  ggplot(aes(x = blength, y = bwt)) + 
+  geom_point(alpha = .5) +
+  labs(title = "Scatter plot of baby's birth weight and baby's length at birth") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+It seemed that there might be a linear relationship between baby's length at birth `blength` and birth weight `bwt`. Thus, I will try `blength` as the predictor of the regression model for birth weight and make a plot of model residuals against fitted values
+
+```{r}
+fit1 = lm(bwt ~ blength, data = birthweight)
+fit1 %>% 
+  broom::tidy() %>% 
+  knitr::kable()
+
+birthweight %>% 
+  modelr::add_residuals(fit1) %>% 
+  modelr::add_predictions(fit1) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = .3) +
+  labs(title = "Plot of model residuals against fitted values",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Compare your model to two others:
+
+One using length at birth and gestational age as predictors (main effects only)
+One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+```{r}
+fit2 = lm(bwt ~ blength + gaweeks,birthweight)
+fit3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, birthweight)
+
+fit2 %>% 
+  broom::tidy() %>% 
+  knitr::kable()
+
+fit3 %>% 
+  broom::tidy() %>% 
+  knitr::kable()
 ```
 
 ## Problem 2
@@ -49,5 +108,20 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
+```
+
+Bootstrapping
+
+```{r}
+bootstrap = 
+  weather_df %>% 
+  modelr::bootstrap(n = 5000, id = "strap_id") %>% 
+  mutate(
+    strap = map(strap, as_tibble),
+    models = map(strap, ~lm(tmax ~ tmin, data = .x)),
+    results = map(models, broom::tidy),
+    summary = map(models, broom::glance)
+  ) %>% 
+  unnest(c(results, summary), names_repair = "universal")
 ```
 
